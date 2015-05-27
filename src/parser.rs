@@ -22,6 +22,17 @@ impl<'a> Parser<'a> {
                 self.advance_while(|ch| '0' <= ch && ch <= '9');
                 Ok(Value::Integer(self.str[start..self.pos].parse().unwrap()))
             },
+            '+' | '-' => {
+                self.advance();
+                if let Some('0' ... '9') = self.peek() {
+                    let start = if ch == '+' { self.pos } else { self.pos - 1 };
+                    self.advance_while(|ch| '0' <= ch && ch <= '9');
+                    Ok(Value::Integer(
+                        self.str[start..self.pos].parse().unwrap()))
+                } else {
+                    unimplemented!()
+                }
+            }
             _ => unimplemented!(),
         })
     }
@@ -39,6 +50,12 @@ impl<'a> Parser<'a> {
             self.pos = self.str.char_range_at(self.pos).next
         }
     }
+
+    fn advance(&mut self) {
+        if self.pos < self.str.len() {
+            self.pos = self.str.char_range_at(self.pos).next
+        }
+    }
 }
 
 #[test]
@@ -49,9 +66,15 @@ fn test_read_empty() {
 
 #[test]
 fn test_read_integers() {
-    let mut parser = Parser::new("0 1234 9223372036854775807");
+    let mut parser = Parser::new("0 -0 +0 +1234 1234 -1234 +9223372036854775807
+                                  -9223372036854775808");
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(0))));
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(0))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(0))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(1234))));
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(1234))));
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(-1234))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(9223372036854775807))));
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(-9223372036854775808))));
     assert_eq!(parser.read(), None);
 }

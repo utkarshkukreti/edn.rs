@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+pub mod parser;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Nil,

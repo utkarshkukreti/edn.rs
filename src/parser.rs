@@ -55,14 +55,10 @@ impl<'a> Parser<'a> {
                 self.advance();
                 let mut string = String::new();
                 loop {
-                    match self.peek() {
-                        Some('"') => {
-                            self.advance();
-                            return Ok(Value::String(string));
-                        },
+                    match self.advance() {
+                        Some('"') => return Ok(Value::String(string)),
                         Some('\\') => {
-                            self.advance();
-                            string.push(match self.peek() {
+                            string.push(match self.advance() {
                                 Some('t')  => '\t',
                                 Some('r')  => '\r',
                                 Some('n')  => '\n',
@@ -71,12 +67,8 @@ impl<'a> Parser<'a> {
                                 Some(_)    => return Err(()),
                                 None       => return Err(())
                             });
-                            self.advance();
                         },
-                        Some(ch) => {
-                            self.advance();
-                            string.push(ch);
-                        }
+                        Some(ch) => string.push(ch),
                         None => return Err(())
                     }
                 }

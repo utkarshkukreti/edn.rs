@@ -32,6 +32,24 @@ impl<'a> Parser<'a> {
                 } else {
                     unimplemented!()
                 }
+            },
+            '\\' => {
+                self.advance();
+                let start = self.pos;
+                self.advance_while(|ch| !ch.is_whitespace());
+                Ok(Value::Char(match &self.str[start..self.pos] {
+                    "newline" => '\n',
+                    "return"  => '\r',
+                    "space"   => ' ',
+                    "tab"     => '\t',
+                    otherwise => {
+                        if otherwise.chars().count() == 1 {
+                            otherwise.char_at(0)
+                        } else {
+                            unimplemented!()
+                        }
+                    }
+                }))
             }
             _ => unimplemented!(),
         })
@@ -76,5 +94,17 @@ fn test_read_integers() {
     assert_eq!(parser.read(), Some(Ok(Value::Integer(-1234))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(9223372036854775807))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(-9223372036854775808))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_chars() {
+    let mut parser = Parser::new("\\a \\π \\newline \\return \\space \\tab");
+    assert_eq!(parser.read(), Some(Ok(Value::Char('a'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('π'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('\n'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('\r'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char(' '))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('\t'))));
     assert_eq!(parser.read(), None);
 }

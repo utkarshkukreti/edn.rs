@@ -99,9 +99,13 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn advance(&mut self) {
+    fn advance(&mut self) -> Option<char> {
         if self.pos < self.str.len() {
-            self.pos = self.str.char_range_at(self.pos).next
+            let range = self.str.char_range_at(self.pos);
+            self.pos = range.next;
+            Some(range.ch)
+        } else {
+            None
         }
     }
 }

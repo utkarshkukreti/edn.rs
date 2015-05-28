@@ -50,6 +50,36 @@ impl<'a> Parser<'a> {
                         }
                     }
                 }))
+            },
+            '"' => {
+                self.advance();
+                let mut string = String::new();
+                loop {
+                    match self.peek() {
+                        Some('"') => {
+                            self.advance();
+                            return Ok(Value::String(string));
+                        },
+                        Some('\\') => {
+                            self.advance();
+                            string.push(match self.peek() {
+                                Some('t')  => '\t',
+                                Some('r')  => '\r',
+                                Some('n')  => '\n',
+                                Some('\\') => '\\',
+                                Some('"')  => '\"',
+                                Some(_)    => return Err(()),
+                                None       => return Err(())
+                            });
+                            self.advance();
+                        },
+                        Some(ch) => {
+                            self.advance();
+                            string.push(ch);
+                        }
+                        None => return Err(())
+                    }
+                }
             }
             _ => unimplemented!(),
         })
@@ -106,5 +136,21 @@ fn test_read_chars() {
     assert_eq!(parser.read(), Some(Ok(Value::Char('\r'))));
     assert_eq!(parser.read(), Some(Ok(Value::Char(' '))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('\t'))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_strings() {
+    let mut parser = Parser::new(r#"
+"foo"
+"bar"
+"baz
+quux"
+"\t\r\n\\\""
+"#);
+    assert_eq!(parser.read(), Some(Ok(Value::String("foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::String("bar".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::String("baz\nquux".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::String("\t\r\n\\\"".into()))));
     assert_eq!(parser.read(), None);
 }

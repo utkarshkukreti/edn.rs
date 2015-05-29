@@ -24,13 +24,26 @@ impl<'a> Parser<'a> {
             },
             '+' | '-' => {
                 self.advance();
-                if let Some('0' ... '9') = self.peek() {
-                    let start = if ch == '+' { self.pos } else { self.pos - 1 };
-                    self.advance_while(|ch| '0' <= ch && ch <= '9');
-                    Ok(Value::Integer(
-                        self.str[start..self.pos].parse().unwrap()))
-                } else {
-                    unimplemented!()
+                match self.peek() {
+                    Some('0' ... '9') => {
+                        let start = if ch == '+' {
+                            self.pos
+                        } else {
+                            self.pos - 1
+                        };
+                        self.advance_while(|ch| '0' <= ch && ch <= '9');
+                        Ok(Value::Integer(
+                            self.str[start..self.pos].parse().unwrap()))
+                    },
+                    Some(ch) if is_symbol_tail(ch) => {
+                        let start = self.pos - 1;
+                        self.advance_while(is_symbol_tail);
+                        Ok(Value::Symbol(self.str[start..self.pos].into()))
+                    },
+                    None | Some(' ') | Some('\t') | Some('\n') => {
+                        Ok(Value::Symbol(ch.to_string()))
+                    }
+                    _ => unimplemented!()
                 }
             },
             '\\' => {
@@ -72,6 +85,12 @@ impl<'a> Parser<'a> {
                         None => return Err(())
                     }
                 }
+            },
+            ch if is_symbol_head(ch) => {
+                let start = self.pos;
+                self.advance();
+                self.advance_while(is_symbol_tail);
+                Ok(Value::Symbol(self.str[start..self.pos].into()))
             }
             _ => unimplemented!(),
         })
@@ -99,6 +118,22 @@ impl<'a> Parser<'a> {
         } else {
             None
         }
+    }
+}
+
+fn is_symbol_head(ch: char) -> bool {
+    match ch {
+        'a' ... 'z' | 'A' ... 'Z' |
+        '.' | '*' | '+' | '!' | '-' | '_' |
+        '?' | '$' | '%' | '&' | '=' | '<' | '>' => true,
+        _ => false
+    }
+}
+
+fn is_symbol_tail(ch: char) -> bool {
+    is_symbol_head(ch) || match ch {
+        '0' ... '9' | ':' | '#' => true,
+        _ => false
     }
 }
 
@@ -148,5 +183,27 @@ quux"
     assert_eq!(parser.read(), Some(Ok(Value::String("bar".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::String("baz\nquux".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::String("\t\r\n\\\"".into()))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_symbols() {
+    let mut parser = Parser::new(r#"
+foo
++foo
+-foo
+.foo
+.*+!-_?$%&=<>:#123
++
+-
+"#);
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("+foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("-foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol(".foo".into()))));
+    assert_eq!(parser.read(),
+               Some(Ok(Value::Symbol(".*+!-_?$%&=<>:#123".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("+".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("-".into()))));
     assert_eq!(parser.read(), None);
 }

@@ -86,6 +86,12 @@ impl<'a> Parser<'a> {
                     }
                 }
             },
+            ':' => {
+                self.advance();
+                let start = self.pos;
+                self.advance_while(is_symbol_tail);
+                Ok(Value::Keyword(self.str[start..self.pos].into()))
+            }
             ch if is_symbol_head(ch) => {
                 let start = self.pos;
                 self.advance();
@@ -205,5 +211,27 @@ foo
                Some(Ok(Value::Symbol(".*+!-_?$%&=<>:#123".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("-".into()))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_keywords() {
+    let mut parser = Parser::new(r#"
+:foo
+:+foo
+:-foo
+:.foo
+:.*+!-_?$%&=<>:#123
+:+
+:-
+"#);
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword("foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword("+foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword("-foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword(".foo".into()))));
+    assert_eq!(parser.read(),
+               Some(Ok(Value::Keyword(".*+!-_?$%&=<>:#123".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword("+".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Keyword("-".into()))));
     assert_eq!(parser.read(), None);
 }

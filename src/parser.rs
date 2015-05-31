@@ -96,7 +96,11 @@ impl<'a> Parser<'a> {
                 let start = self.pos;
                 self.advance();
                 self.advance_while(is_symbol_tail);
-                Ok(Value::Symbol(self.str[start..self.pos].into()))
+                Ok(match &self.str[start..self.pos] {
+                    "true"    => Value::Boolean(true),
+                    "false"   => Value::Boolean(false),
+                    otherwise => Value::Symbol(otherwise.into())
+                })
             }
             _ => unimplemented!(),
         })
@@ -233,5 +237,13 @@ fn test_read_keywords() {
                Some(Ok(Value::Keyword(".*+!-_?$%&=<>:#123".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Keyword("+".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Keyword("-".into()))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_booleans() {
+    let mut parser = Parser::new("true false");
+    assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
+    assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
     assert_eq!(parser.read(), None);
 }

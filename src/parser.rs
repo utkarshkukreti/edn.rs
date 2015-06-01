@@ -99,6 +99,7 @@ impl<'a> Parser<'a> {
                 Ok(match &self.str[start..self.pos] {
                     "true"    => Value::Boolean(true),
                     "false"   => Value::Boolean(false),
+                    "nil"     => Value::Nil,
                     otherwise => Value::Symbol(otherwise.into())
                 })
             }
@@ -241,9 +242,10 @@ fn test_read_keywords() {
 }
 
 #[test]
-fn test_read_booleans() {
-    let mut parser = Parser::new("true false");
+fn test_read_booleans_and_nil() {
+    let mut parser = Parser::new("true false nil");
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
+    assert_eq!(parser.read(), Some(Ok(Value::Nil)));
     assert_eq!(parser.read(), None);
 }

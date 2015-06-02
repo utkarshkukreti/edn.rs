@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read(&mut self) -> Option<Result<Value, ()>> {
-        self.advance_while(|ch| ch.is_whitespace());
+        self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
         self.peek().map(|ch| match ch {
             '0' ... '9' => {
@@ -247,5 +247,13 @@ fn test_read_booleans_and_nil() {
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
     assert_eq!(parser.read(), Some(Ok(Value::Nil)));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_commas() {
+    let mut parser = Parser::new(",, true ,false,");
+    assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
+    assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
     assert_eq!(parser.read(), None);
 }

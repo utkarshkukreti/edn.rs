@@ -5,6 +5,13 @@ pub struct Parser<'a> {
     pos: usize
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct Error {
+    lo: usize,
+    hi: usize,
+    message: String
+}
+
 impl<'a> Parser<'a> {
     pub fn new(str: &'a str) -> Parser<'a> {
         Parser {

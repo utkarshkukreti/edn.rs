@@ -20,7 +20,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn read(&mut self) -> Option<Result<Value, ()>> {
+    pub fn read(&mut self) -> Option<Result<Value, Error>> {
         self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
         self.peek().map(|ch| match ch {
@@ -84,12 +84,12 @@ impl<'a> Parser<'a> {
                                 Some('n')  => '\n',
                                 Some('\\') => '\\',
                                 Some('"')  => '\"',
-                                Some(_)    => return Err(()),
-                                None       => return Err(())
+                                Some(_)    => unimplemented!(),
+                                None       => unimplemented!()
                             });
                         },
                         Some(ch) => string.push(ch),
-                        None => return Err(())
+                        None => unimplemented!()
                     }
                 }
             },

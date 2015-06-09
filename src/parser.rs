@@ -66,7 +66,12 @@ impl<'a> Parser<'a> {
                         if otherwise.chars().count() == 1 {
                             otherwise.char_at(0)
                         } else {
-                            unimplemented!()
+                            return Err(Error {
+                                lo: start - 1,
+                                hi: self.pos,
+                                message: format!("invalid char escape `\\{}`",
+                                                 otherwise)
+                            })
                         }
                     }
                 }))
@@ -186,6 +191,12 @@ fn test_read_chars() {
     assert_eq!(parser.read(), Some(Ok(Value::Char(' '))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('\t'))));
     assert_eq!(parser.read(), None);
+
+    let mut parser = Parser::new("  \\foo  ");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 2,
+        hi: 6,
+        message: "invalid char escape `\\foo`".into()})));
 }
 
 #[test]

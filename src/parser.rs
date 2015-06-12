@@ -89,7 +89,12 @@ impl<'a> Parser<'a> {
                                 Some('n')  => '\n',
                                 Some('\\') => '\\',
                                 Some('"')  => '\"',
-                                Some(_)    => unimplemented!(),
+                                Some(ch) => return Err(Error {
+                                    lo: self.pos - 2,
+                                    hi: self.pos,
+                                    message: format!(
+                                        "invalid string escape `\\{}`", ch)
+                                }),
                                 None       => unimplemented!()
                             });
                         },
@@ -213,6 +218,12 @@ quux"
     assert_eq!(parser.read(), Some(Ok(Value::String("baz\nquux".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::String("\t\r\n\\\"".into()))));
     assert_eq!(parser.read(), None);
+
+    let mut parser = Parser::new("\"foo\\x\"");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 4,
+        hi: 6,
+        message: "invalid string escape `\\x`".into()})));
 }
 
 #[test]

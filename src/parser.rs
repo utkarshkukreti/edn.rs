@@ -77,6 +77,7 @@ impl<'a> Parser<'a> {
                 }))
             },
             '"' => {
+                let start = self.pos;
                 self.advance();
                 let mut string = String::new();
                 loop {
@@ -99,7 +100,11 @@ impl<'a> Parser<'a> {
                             });
                         },
                         Some(ch) => string.push(ch),
-                        None => unimplemented!()
+                        None => return Err(Error {
+                            lo: start,
+                            hi: self.pos,
+                            message: "expected closing `\"`, found EOF".into()
+                        })
                     }
                 }
             },
@@ -224,6 +229,12 @@ quux"
         lo: 4,
         hi: 6,
         message: "invalid string escape `\\x`".into()})));
+
+    let mut parser = Parser::new("   \"foo");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 3,
+        hi: 7,
+        message: "expected closing `\"`, found EOF".into()})));
 }
 
 #[test]

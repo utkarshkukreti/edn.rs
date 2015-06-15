@@ -113,7 +113,24 @@ impl<'a> Parser<'a> {
                 let start = self.pos;
                 self.advance_while(is_symbol_tail);
                 Ok(Value::Keyword(self.str[start..self.pos].into()))
-            }
+            },
+            '(' => {
+                self.advance();
+                let mut list = vec![];
+                loop {
+                    self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+
+                    if self.peek() == Some(')') {
+                        self.advance();
+                        return Ok(Value::List(list))
+                    }
+
+                    match self.read() {
+                        Some(Ok(value)) => list.push(value),
+                        _ => unimplemented!()
+                    }
+                }
+            },
             ch if is_symbol_head(ch) => {
                 let start = self.pos;
                 self.advance();
@@ -295,5 +312,32 @@ fn test_read_commas() {
     let mut parser = Parser::new(",, true ,false,");
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_lists() {
+    let mut parser = Parser::new("() (1 2 3) (true, false, nil)
+                                  (((\"foo\" \"bar\")))");
+
+    assert_eq!(parser.read(), Some(Ok(Value::List(vec![]))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::List(vec![
+        Value::Integer(1),
+        Value::Integer(2),
+        Value::Integer(3)]))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::List(vec![
+        Value::Boolean(true),
+        Value::Boolean(false),
+        Value::Nil]))));
+
+    assert_eq!(parser.read(), Some(Ok(
+        Value::List(vec![
+            Value::List(vec![
+                Value::List(vec![
+                    Value::String("foo".into()),
+                    Value::String("bar".into())])])]))));
+
     assert_eq!(parser.read(), None);
 }

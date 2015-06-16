@@ -127,6 +127,7 @@ impl<'a> Parser<'a> {
 
                     match self.read() {
                         Some(Ok(value)) => list.push(value),
+                        Some(Err(err))  => return Err(err),
                         _ => unimplemented!()
                     }
                 }
@@ -340,4 +341,10 @@ fn test_read_lists() {
                     Value::String("bar".into())])])]))));
 
     assert_eq!(parser.read(), None);
+
+    let mut parser = Parser::new("((  \\foo ))");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 4,
+        hi: 8,
+        message: "invalid char escape `\\foo`".into()})));
 }

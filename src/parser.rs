@@ -115,6 +115,7 @@ impl<'a> Parser<'a> {
                 Ok(Value::Keyword(self.str[start..self.pos].into()))
             },
             '(' => {
+                let start = self.pos;
                 self.advance();
                 let mut list = vec![];
                 loop {
@@ -128,7 +129,11 @@ impl<'a> Parser<'a> {
                     match self.read() {
                         Some(Ok(value)) => list.push(value),
                         Some(Err(err))  => return Err(err),
-                        _ => unimplemented!()
+                        None => return Err(Error {
+                            lo: start,
+                            hi: self.pos,
+                            message: "unclosed `(`".into()
+                        })
                     }
                 }
             },
@@ -347,4 +352,10 @@ fn test_read_lists() {
         lo: 4,
         hi: 8,
         message: "invalid char escape `\\foo`".into()})));
+
+    let mut parser = Parser::new("( (  1 2 3");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 2,
+        hi: 10,
+        message: "unclosed `(`".into()})));
 }

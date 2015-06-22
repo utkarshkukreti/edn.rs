@@ -1,8 +1,10 @@
+use std::str::CharIndices;
+
 use Value;
 
 pub struct Parser<'a> {
     str: &'a str,
-    pos: usize
+    chars: CharIndices<'a>
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -16,36 +18,34 @@ impl<'a> Parser<'a> {
     pub fn new(str: &'a str) -> Parser<'a> {
         Parser {
             str: str,
-            pos: 0
+            chars: str.char_indices()
         }
     }
 
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
         self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
-        self.peek().map(|ch| match ch {
-            '0' ... '9' => {
-                let start = self.pos;
-                self.advance_while(|ch| '0' <= ch && ch <= '9');
-                Ok(Value::Integer(self.str[start..self.pos].parse().unwrap()))
+        self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
+            (start, '0' ... '9') => {
+                let end = self.advance_while(|ch| '0' <= ch && ch <= '9');
+                Ok(Value::Integer(self.str[start..end].parse().unwrap()))
             },
-            '+' | '-' => {
-                self.advance();
+            (start, ch @ '+') | (start, ch @ '-') => {
+                self.chars.next();
                 match self.peek() {
                     Some('0' ... '9') => {
                         let start = if ch == '+' {
-                            self.pos
+                            start + 1
                         } else {
-                            self.pos - 1
+                            start
                         };
-                        self.advance_while(|ch| '0' <= ch && ch <= '9');
+                        let end = self.advance_while(|ch| '0' <= ch && ch <= '9');
                         Ok(Value::Integer(
-                            self.str[start..self.pos].parse().unwrap()))
+                            self.str[start..end].parse().unwrap()))
                     },
                     Some(ch) if is_symbol_tail(ch) => {
-                        let start = self.pos - 1;
-                        self.advance_while(is_symbol_tail);
-                        Ok(Value::Symbol(self.str[start..self.pos].into()))
+                        let end = self.advance_while(is_symbol_tail);
+                        Ok(Value::Symbol(self.str[start..end].into()))
                     },
                     None | Some(' ') | Some('\t') | Some('\n') => {
                         Ok(Value::Symbol(ch.to_string()))
@@ -53,22 +53,22 @@ impl<'a> Parser<'a> {
                     _ => unimplemented!()
                 }
             },
-            '\\' => {
-                self.advance();
-                let start = self.pos;
-                self.advance_while(|ch| !ch.is_whitespace());
-                Ok(Value::Char(match &self.str[start..self.pos] {
+            (start, '\\') => {
+                self.chars.next();
+                let start = start + 1;
+                let end = self.advance_while(|ch| !ch.is_whitespace());
+                Ok(Value::Char(match &self.str[start..end] {
                     "newline" => '\n',
                     "return"  => '\r',
                     "space"   => ' ',
                     "tab"     => '\t',
                     otherwise => {
                         if otherwise.chars().count() == 1 {
-                            otherwise.char_at(0)
+                            otherwise.chars().next().unwrap()
                         } else {
                             return Err(Error {
                                 lo: start - 1,
-                                hi: self.pos,
+                                hi: end,
                                 message: format!("invalid char escape `\\{}`",
                                                  otherwise)
                             })
@@ -76,53 +76,50 @@ impl<'a> Parser<'a> {
                     }
                 }))
             },
-            '"' => {
-                let start = self.pos;
-                self.advance();
+            (start, '"') => {
+                self.chars.next();
                 let mut string = String::new();
                 loop {
-                    match self.advance() {
-                        Some('"') => return Ok(Value::String(string)),
-                        Some('\\') => {
-                            string.push(match self.advance() {
-                                Some('t')  => '\t',
-                                Some('r')  => '\r',
-                                Some('n')  => '\n',
-                                Some('\\') => '\\',
-                                Some('"')  => '\"',
-                                Some(ch) => return Err(Error {
-                                    lo: self.pos - 2,
-                                    hi: self.pos,
+                    match self.chars.next() {
+                        Some((_, '"')) => return Ok(Value::String(string)),
+                        Some((_, '\\')) => {
+                            string.push(match self.chars.next() {
+                                Some((_, 't'))  => '\t',
+                                Some((_, 'r'))  => '\r',
+                                Some((_, 'n'))  => '\n',
+                                Some((_, '\\')) => '\\',
+                                Some((_, '"'))  => '\"',
+                                Some((pos, ch)) => return Err(Error {
+                                    lo: pos - 1,
+                                    hi: pos + 1,
                                     message: format!(
                                         "invalid string escape `\\{}`", ch)
                                 }),
                                 None       => unimplemented!()
                             });
                         },
-                        Some(ch) => string.push(ch),
+                        Some((_, ch)) => string.push(ch),
                         None => return Err(Error {
                             lo: start,
-                            hi: self.pos,
+                            hi: self.str.len(),
                             message: "expected closing `\"`, found EOF".into()
                         })
                     }
                 }
             },
-            ':' => {
-                self.advance();
-                let start = self.pos;
-                self.advance_while(is_symbol_tail);
-                Ok(Value::Keyword(self.str[start..self.pos].into()))
+            (start, ':') => {
+                self.chars.next();
+                let end = self.advance_while(is_symbol_tail);
+                Ok(Value::Keyword(self.str[start + 1..end].into()))
             },
-            '(' => {
-                let start = self.pos;
-                self.advance();
+            (start, '(') => {
+                self.chars.next();
                 let mut list = vec![];
                 loop {
                     self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
                     if self.peek() == Some(')') {
-                        self.advance();
+                        self.chars.next();
                         return Ok(Value::List(list))
                     }
 
@@ -131,17 +128,16 @@ impl<'a> Parser<'a> {
                         Some(Err(err))  => return Err(err),
                         None => return Err(Error {
                             lo: start,
-                            hi: self.pos,
+                            hi: self.str.len(),
                             message: "unclosed `(`".into()
                         })
                     }
                 }
             },
-            ch if is_symbol_head(ch) => {
-                let start = self.pos;
-                self.advance();
-                self.advance_while(is_symbol_tail);
-                Ok(match &self.str[start..self.pos] {
+            (start, ch) if is_symbol_head(ch) => {
+                self.chars.next();
+                let end = self.advance_while(is_symbol_tail);
+                Ok(match &self.str[start..end] {
                     "true"    => Value::Boolean(true),
                     "false"   => Value::Boolean(false),
                     "nil"     => Value::Nil,
@@ -153,26 +149,21 @@ impl<'a> Parser<'a> {
     }
 
     fn peek(&self) -> Option<char> {
-        if self.pos < self.str.len() {
-            Some(self.str.char_at(self.pos))
-        } else {
-            None
-        }
+        self.chars.clone().next().map(|(_, ch)| ch)
     }
 
-    fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) {
-        while self.peek().map_or(false, |ch| f(ch)) {
-            self.pos = self.str.char_range_at(self.pos).next
-        }
-    }
-
-    fn advance(&mut self) -> Option<char> {
-        if self.pos < self.str.len() {
-            let range = self.str.char_range_at(self.pos);
-            self.pos = range.next;
-            Some(range.ch)
-        } else {
-            None
+    fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {
+        loop {
+            match self.chars.clone().next() {
+                Some((pos, ch)) => {
+                    if f(ch) {
+                        self.chars.next();
+                    } else {
+                        return pos
+                    }
+                },
+                None => return self.str.len()
+            }
         }
     }
 }

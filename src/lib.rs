@@ -1,5 +1,3 @@
-#![feature(str_char)]
-
 use std::collections::{BTreeMap, BTreeSet};
 
 pub mod parser;

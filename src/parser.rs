@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
                             return Err(Error {
                                 lo: start - 1,
                                 hi: end,
-                                message: format!("invalid char escape `\\{}`",
+                                message: format!("invalid char literal `\\{}`",
                                                  otherwise)
                             })
                         }
@@ -220,7 +220,7 @@ fn test_read_chars() {
     assert_eq!(parser.read(), Some(Err(Error {
         lo: 2,
         hi: 6,
-        message: "invalid char escape `\\foo`".into()})));
+        message: "invalid char literal `\\foo`".into()})));
 }
 
 #[test]
@@ -342,7 +342,7 @@ fn test_read_lists() {
     assert_eq!(parser.read(), Some(Err(Error {
         lo: 4,
         hi: 8,
-        message: "invalid char escape `\\foo`".into()})));
+        message: "invalid char literal `\\foo`".into()})));
 
     let mut parser = Parser::new("( (  1 2 3");
     assert_eq!(parser.read(), Some(Err(Error {

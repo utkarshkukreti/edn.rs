@@ -112,24 +112,34 @@ impl<'a> Parser<'a> {
                 let end = self.advance_while(is_symbol_tail);
                 Ok(Value::Keyword(self.str[start + 1..end].into()))
             },
-            (start, '(') => {
+            (start, open @ '(') | (start, open @ '[') => {
+                let close = match open {
+                    '(' => ')',
+                    '[' => ']',
+                    _   => unreachable!()
+                };
+
                 self.chars.next();
-                let mut list = vec![];
+                let mut items = vec![];
                 loop {
                     self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
-                    if self.peek() == Some(')') {
+                    if self.peek() == Some(close) {
                         self.chars.next();
-                        return Ok(Value::List(list))
+                        return Ok(match open {
+                            '(' => Value::List(items),
+                            '[' => Value::Vector(items),
+                            _   => unreachable!()
+                        })
                     }
 
                     match self.read() {
-                        Some(Ok(value)) => list.push(value),
+                        Some(Ok(value)) => items.push(value),
                         Some(Err(err))  => return Err(err),
                         None => return Err(Error {
                             lo: start,
                             hi: self.str.len(),
-                            message: "unclosed `(`".into()
+                            message: format!("unclosed `{}`", open)
                         })
                     }
                 }
@@ -349,4 +359,43 @@ fn test_read_lists() {
         lo: 2,
         hi: 10,
         message: "unclosed `(`".into()})));
+}
+
+#[test]
+fn test_read_vectors() {
+    let mut parser = Parser::new("[] [1 2 3] [true, false, nil]
+                                  [[[\"foo\" \"bar\"]]]");
+
+    assert_eq!(parser.read(), Some(Ok(Value::Vector(vec![]))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Vector(vec![
+        Value::Integer(1),
+        Value::Integer(2),
+        Value::Integer(3)]))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Vector(vec![
+        Value::Boolean(true),
+        Value::Boolean(false),
+        Value::Nil]))));
+
+    assert_eq!(parser.read(), Some(Ok(
+        Value::Vector(vec![
+            Value::Vector(vec![
+                Value::Vector(vec![
+                    Value::String("foo".into()),
+                    Value::String("bar".into())])])]))));
+
+    assert_eq!(parser.read(), None);
+
+    let mut parser = Parser::new("[[  \\foo ]]");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 4,
+        hi: 8,
+        message: "invalid char literal `\\foo`".into()})));
+
+    let mut parser = Parser::new("[ [  1 2 3");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 2,
+        hi: 10,
+        message: "unclosed `[`".into()})));
 }

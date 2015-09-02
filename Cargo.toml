@@ -2,3 +2,6 @@
 name = "edn"
 version = "0.1.0"
 authors = ["Utkarsh Kukreti <utkarshkukreti@gmail.com>"]
+
+[dependencies]
+ordered-float = "0.0.2"

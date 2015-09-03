@@ -1,4 +1,8 @@
+extern crate ordered_float;
+
 use std::collections::{BTreeMap, BTreeSet};
+
+use ordered_float::OrderedFloat;
 
 pub mod parser;
 
@@ -11,7 +15,7 @@ pub enum Value {
     Symbol(String),
     Keyword(String),
     Integer(i64),
-    Float(f64),
+    Float(OrderedFloat<f64>),
     List(Vec<Value>),
     Vector(Vec<Value>),
     Map(BTreeMap<Value, Value>),

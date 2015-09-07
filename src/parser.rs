@@ -9,9 +9,9 @@ pub struct Parser<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error {
-    lo: usize,
-    hi: usize,
-    message: String
+    pub lo: usize,
+    pub hi: usize,
+    pub message: String
 }
 
 impl<'a> Parser<'a> {

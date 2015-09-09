@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 
 pub mod parser;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     Nil,
     Boolean(bool),

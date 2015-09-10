@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::str::CharIndices;
 
 use Value;
@@ -112,10 +113,11 @@ impl<'a> Parser<'a> {
                 let end = self.advance_while(is_symbol_tail);
                 Ok(Value::Keyword(self.str[start + 1..end].into()))
             },
-            (start, open @ '(') | (start, open @ '[') => {
+            (start, open @ '(') | (start, open @ '[') | (start, open @ '{') => {
                 let close = match open {
                     '(' => ')',
                     '[' => ']',
+                    '{' => '}',
                     _   => unreachable!()
                 };
 
@@ -129,6 +131,27 @@ impl<'a> Parser<'a> {
                         return Ok(match open {
                             '(' => Value::List(items),
                             '[' => Value::Vector(items),
+                            '{' => {
+                                let mut map = BTreeMap::new();
+                                let mut iter = items.into_iter();
+                                while let Some(key) = iter.next() {
+                                    if let Some(value) = iter.next() {
+                                        map.insert(key, value);
+                                    } else {
+                                        let end = self.chars.clone()
+                                            .next()
+                                            .map(|(pos, _)| pos)
+                                            .unwrap_or(self.str.len());
+                                        return Err(Error {
+                                            lo: start,
+                                            hi: end,
+                                            message:
+                                            "odd number of items in a Map".into()
+                                        })
+                                    }
+                                }
+                                Value::Map(map)
+                            }
                             _   => unreachable!()
                         })
                     }
@@ -398,4 +421,61 @@ fn test_read_vectors() {
         lo: 2,
         hi: 10,
         message: "unclosed `[`".into()})));
+}
+
+#[test]
+fn test_read_maps() {
+    use std::collections::BTreeMap;
+
+    let mut parser = Parser::new("{} {1 2} {true, false}
+                                  {{\"foo\" \"bar\"} \"baz\"}");
+
+    assert_eq!(parser.read(), Some(Ok(Value::Map(BTreeMap::new()))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Map({
+        let mut map = BTreeMap::new();
+        map.insert(Value::Integer(1), Value::Integer(2));
+        map
+    }))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Map({
+        let mut map = BTreeMap::new();
+        map.insert(Value::Boolean(true), Value::Boolean(false));
+        map
+    }))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Map({
+        let mut map = BTreeMap::new();
+        map.insert(Value::Map({
+            let mut map = BTreeMap::new();
+            map.insert(Value::String("foo".into()),
+                       Value::String("bar".into()));
+            map
+        }), Value::String("baz".into()));
+        map
+    }))));
+
+    let mut parser = Parser::new("{\\foo true}");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 1,
+        hi: 5,
+        message: "invalid char literal `\\foo`".into()})));
+
+    let mut parser = Parser::new("{ { 1 2 3");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 2,
+        hi: 9,
+        message: "unclosed `{`".into()})));
+
+    let mut parser = Parser::new("{1 2 3}");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 0,
+        hi: 7,
+        message: "odd number of items in a Map".into()})));
+
+    let mut parser = Parser::new("{{1 2 3}}");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 1,
+        hi: 8,
+        message: "odd number of items in a Map".into()})));
 }

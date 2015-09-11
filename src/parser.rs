@@ -167,6 +167,35 @@ impl<'a> Parser<'a> {
                     }
                 }
             },
+            (start, '#') => {
+                self.chars.next();
+                match self.chars.next() {
+                    Some((_, open @ '{')) => {
+                        let close = '}';
+                        let mut items = vec![];
+                        loop {
+                            self.advance_while(|ch| ch.is_whitespace() ||
+                                                    ch == ',');
+                            if self.peek() == Some(close) {
+                                self.chars.next();
+                                return Ok(Value::Set(
+                                    items.into_iter().collect()));
+                            }
+
+                            match self.read() {
+                                Some(Ok(value)) => items.push(value),
+                                Some(Err(err))  => return Err(err),
+                                None => return Err(Error {
+                                    lo: start,
+                                    hi: self.str.len(),
+                                    message: format!("unclosed `#{}`", open)
+                                })
+                            }
+                        }
+                    },
+                    _ => unimplemented!()
+                }
+            }
             (start, ch) if is_symbol_head(ch) => {
                 self.chars.next();
                 let end = self.advance_while(is_symbol_tail);
@@ -478,4 +507,47 @@ fn test_read_maps() {
         lo: 1,
         hi: 8,
         message: "odd number of items in a Map".into()})));
+}
+
+#[test]
+fn test_read_sets() {
+    let mut parser = Parser::new("#{} #{1 2 2 3 3 3} #{true, false, nil}
+                                  #{#{#{\"foo\" \"bar\"}}}");
+
+    assert_eq!(parser.read(),
+               Some(Ok(Value::Set([].iter().cloned().collect()))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Set(
+        [Value::Integer(1),
+         Value::Integer(2),
+         Value::Integer(3)].iter().cloned().collect()))));
+
+    assert_eq!(parser.read(), Some(Ok(Value::Set(
+        [Value::Boolean(true),
+         Value::Boolean(false),
+         Value::Nil].iter().cloned().collect()))));
+
+    assert_eq!(parser.read(), Some(Ok(
+        Value::Set(
+            [Value::Set(
+                [Value::Set(
+                    [Value::String("foo".into()),
+                     Value::String("bar".into())
+                     ].iter().cloned().collect())
+                 ].iter().cloned().collect())
+             ].iter().cloned().collect()))));
+
+    assert_eq!(parser.read(), None);
+
+    let mut parser = Parser::new("#{#{  \\foo }}");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 6,
+        hi: 10,
+        message: "invalid char literal `\\foo`".into()})));
+
+    let mut parser = Parser::new("#{ #{ 1 2 3");
+    assert_eq!(parser.read(), Some(Err(Error {
+        lo: 3,
+        hi: 11,
+        message: "unclosed `#{`".into()})));
 }

@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::str::CharIndices;
 
+use ordered_float::OrderedFloat;
+
 use Value;
 
 pub struct Parser<'a> {
@@ -29,7 +31,14 @@ impl<'a> Parser<'a> {
         self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
             (start, '0' ... '9') => {
                 let end = self.advance_while(|ch| '0' <= ch && ch <= '9');
-                Ok(Value::Integer(self.str[start..end].parse().unwrap()))
+                if self.peek() == Some('.') {
+                    self.chars.next();
+                    let end = self.advance_while(|ch| '0' <= ch && ch <= '9');
+                    Ok(Value::Float(OrderedFloat(
+                        self.str[start..end].parse().unwrap())))
+                } else {
+                    Ok(Value::Integer(self.str[start..end].parse().unwrap()))
+                }
             },
             (start, ch @ '+') | (start, ch @ '-') => {
                 self.chars.next();
@@ -40,9 +49,20 @@ impl<'a> Parser<'a> {
                         } else {
                             start
                         };
-                        let end = self.advance_while(|ch| '0' <= ch && ch <= '9');
-                        Ok(Value::Integer(
-                            self.str[start..end].parse().unwrap()))
+                        let end = self.advance_while(|ch| {
+                          '0' <= ch && ch <= '9'
+                        });
+                        if self.peek() == Some('.') {
+                            self.chars.next();
+                            let end = self.advance_while(|ch| {
+                                '0' <= ch && ch <= '9'
+                            });
+                            Ok(Value::Float(OrderedFloat(
+                                self.str[start..end].parse().unwrap())))
+                        } else {
+                            Ok(Value::Integer(
+                                self.str[start..end].parse().unwrap()))
+                        }
                     },
                     Some(ch) if is_symbol_tail(ch) => {
                         let end = self.advance_while(is_symbol_tail);
@@ -264,6 +284,21 @@ fn test_read_integers() {
     assert_eq!(parser.read(), Some(Ok(Value::Integer(-1234))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(9223372036854775807))));
     assert_eq!(parser.read(), Some(Ok(Value::Integer(-9223372036854775808))));
+    assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_floats() {
+    use ordered_float::OrderedFloat;
+
+    let mut parser = Parser::new("0. 0.0 -0.0 +0.0 1.23 +1.23 -1.23");
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(1.23)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(1.23)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(-1.23)))));
     assert_eq!(parser.read(), None);
 }
 

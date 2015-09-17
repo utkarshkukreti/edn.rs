@@ -2,6 +2,10 @@
 name = "edn"
 version = "0.1.0"
 authors = ["Utkarsh Kukreti <utkarshkukreti@gmail.com>"]
+description = "An EDN (Extensible Data Notation) parser."
+license = "MIT"
+homepage = "https://github.com/utkarshkukreti/edn.rs"
+repository = "https://github.com/utkarshkukreti/edn.rs"
 
 [dependencies]
 ordered-float = "0.0.2"

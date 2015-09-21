@@ -70,6 +70,17 @@ impl<'a> Parser<'a> {
                     _ => unimplemented!()
                 }
             },
+            (start, '.') => {
+                self.chars.next();
+                if let Some('0' ... '9') = self.peek() {
+                    let end = self.advance_while(|ch| ch.is_digit(10));
+                    Ok(Value::Float(OrderedFloat(
+                        self.str[start..end].parse().unwrap())))
+                } else {
+                    let end = self.advance_while(is_symbol_tail);
+                    Ok(Value::Symbol(self.str[start..end].into()))
+                }
+            },
             (start, '\\') => {
                 self.chars.next();
                 let start = start + 1;

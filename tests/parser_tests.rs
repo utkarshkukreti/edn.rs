@@ -29,7 +29,7 @@ fn test_read_integers() {
 fn test_read_floats() {
     use ordered_float::OrderedFloat;
 
-    let mut parser = Parser::new("0. 0.0 -0.0 +0.0 1.23 +1.23 -1.23");
+    let mut parser = Parser::new("0. 0.0 -0.0 +0.0 1.23 +1.23 -1.23 .123");
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
@@ -37,6 +37,7 @@ fn test_read_floats() {
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(1.23)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(1.23)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(-1.23)))));
+    assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.123)))));
     assert_eq!(parser.read(), None);
 }
 

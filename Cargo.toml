@@ -8,4 +8,4 @@ homepage = "https://github.com/utkarshkukreti/edn.rs"
 repository = "https://github.com/utkarshkukreti/edn.rs"
 
 [dependencies]
-ordered-float = "0.0.2"
+ordered-float = "0.4.0"

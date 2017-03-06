@@ -4,8 +4,10 @@ version = "0.1.1"
 authors = ["Utkarsh Kukreti <utkarshkukreti@gmail.com>"]
 description = "An EDN (Extensible Data Notation) parser."
 license = "MIT"
+documentation = "https://docs.rs/edn"
 homepage = "https://github.com/utkarshkukreti/edn.rs"
 repository = "https://github.com/utkarshkukreti/edn.rs"
+categories = ["parser-implementations"]
 
 [dependencies]
 ordered-float = "0.4.0"

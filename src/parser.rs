@@ -220,6 +220,24 @@ impl<'a> Parser<'a> {
                             }
                         }
                     },
+                    Some((start,  ch)) if is_symbol_head(ch) => {
+                        self.chars.next();
+                        let end = self.advance_while(is_symbol_tail);
+
+                        let tag = &self.str[start..end];
+                        let value = self.read();
+
+                        match value {
+                            Some(Ok(v)) => return Ok(Value::TaggedValue(tag.into(),
+                                                                        Box::new(v))),
+                            Some(e) => return e,
+                            None => return Err(Error {
+                                lo: start,
+                                hi: self.str.len(),
+                                message: "malformed tagged value".into()
+                            })
+                        }
+                    },
                     _ => unimplemented!()
                 }
             }

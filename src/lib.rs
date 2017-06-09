@@ -19,5 +19,6 @@ pub enum Value {
     List(Vec<Value>),
     Vector(Vec<Value>),
     Map(BTreeMap<Value, Value>),
-    Set(BTreeSet<Value>)
+    Set(BTreeSet<Value>),
+    TaggedValue(String, Box<Value>),
 }

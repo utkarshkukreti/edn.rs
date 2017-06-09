@@ -232,7 +232,11 @@ impl<'a> Parser<'a> {
                     "nil"     => Value::Nil,
                     otherwise => Value::Symbol(otherwise.into())
                 })
-            }
+            },
+            (_, '/') => {
+                self.chars.next();
+                Ok(Value::Symbol("/".into()))
+            },
             _ => unimplemented!(),
         })
     }
@@ -268,7 +272,7 @@ fn is_symbol_head(ch: char) -> bool {
 
 fn is_symbol_tail(ch: char) -> bool {
     is_symbol_head(ch) || match ch {
-        '0' ... '9' | ':' | '#' => true,
+        '0' ... '9' | ':' | '#' | '/' => true,
         _ => false
     }
 }

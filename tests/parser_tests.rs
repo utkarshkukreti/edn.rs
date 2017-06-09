@@ -97,6 +97,8 @@ foo
 .*+!-_?$%&=<>:#123
 +
 -
+namespaced/symbol
+/
 "#);
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("foo".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+foo".into()))));
@@ -106,6 +108,9 @@ foo
                Some(Ok(Value::Symbol(".*+!-_?$%&=<>:#123".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("-".into()))));
+    assert_eq!(parser.read(),
+               Some(Ok(Value::Symbol("namespaced/symbol".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("/".into()))));
     assert_eq!(parser.read(), None);
 }
 

@@ -97,6 +97,8 @@ foo
 .*+!-_?$%&=<>:#123
 +
 -
+namespaced/symbol
+/
 "#);
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("foo".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+foo".into()))));
@@ -106,6 +108,9 @@ foo
                Some(Ok(Value::Symbol(".*+!-_?$%&=<>:#123".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("-".into()))));
+    assert_eq!(parser.read(),
+               Some(Ok(Value::Symbol("namespaced/symbol".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("/".into()))));
     assert_eq!(parser.read(), None);
 }
 
@@ -324,4 +329,38 @@ fn test_read_sets() {
         lo: 3,
         hi: 11,
         message: "unclosed `#{`".into()})));
+}
+
+#[test]
+fn test_tagged_values() {
+    let mut parser = Parser::new(r#"
+#color (255, 31, 191)
+#foo/bar :baz
+#nested #tags "works"
+#noclose
+"#);
+    assert_eq!(parser.read(),
+               Some(Ok(Value::TaggedValue("color".into(),
+                                          Box::new(Value::List(vec![Value::Integer(255),
+                                                                    Value::Integer(31),
+                                                                    Value::Integer(191)]))))));
+    assert_eq!(parser.read(),
+               Some(Ok(Value::TaggedValue("foo/bar".into(),
+                                          Box::new(Value::Keyword("baz".into()))))));
+    assert_eq!(parser.read(),
+               Some(Ok(
+                   Value::TaggedValue(
+                       "nested".into(),
+                       Box::new(
+                           Value::TaggedValue(
+                               "tags".into(),
+                               Box::new(Value::String("works".into()))))))));
+    assert_eq!(parser.read(),
+               Some(Err(Error {
+                   lo: 60,
+                   hi: 68,
+                   message: "malformed tagged value".into(),
+               })));
+
+    assert_eq!(parser.read(), None);
 }

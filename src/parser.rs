@@ -220,6 +220,24 @@ impl<'a> Parser<'a> {
                             }
                         }
                     },
+                    Some((start,  ch)) if is_symbol_head(ch) => {
+                        self.chars.next();
+                        let end = self.advance_while(is_symbol_tail);
+
+                        let tag = &self.str[start..end];
+                        let value = self.read();
+
+                        match value {
+                            Some(Ok(v)) => return Ok(Value::TaggedValue(tag.into(),
+                                                                        Box::new(v))),
+                            Some(e) => return e,
+                            None => return Err(Error {
+                                lo: start,
+                                hi: self.str.len(),
+                                message: "malformed tagged value".into()
+                            })
+                        }
+                    },
                     _ => unimplemented!()
                 }
             }
@@ -232,7 +250,11 @@ impl<'a> Parser<'a> {
                     "nil"     => Value::Nil,
                     otherwise => Value::Symbol(otherwise.into())
                 })
-            }
+            },
+            (_, '/') => {
+                self.chars.next();
+                Ok(Value::Symbol("/".into()))
+            },
             _ => unimplemented!(),
         })
     }
@@ -268,7 +290,7 @@ fn is_symbol_head(ch: char) -> bool {
 
 fn is_symbol_tail(ch: char) -> bool {
     is_symbol_head(ch) || match ch {
-        '0' ... '9' | ':' | '#' => true,
+        '0' ... '9' | ':' | '#' | '/' => true,
         _ => false
     }
 }

@@ -228,8 +228,8 @@ impl<'a> Parser<'a> {
                         let value = self.read();
 
                         match value {
-                            Some(Ok(v)) => return Ok(Value::TaggedValue(tag.into(),
-                                                                        Box::new(v))),
+                            Some(Ok(v)) => return Ok(Value::Tagged(tag.into(),
+                                                                   Box::new(v))),
                             Some(e) => return e,
                             None => return Err(Error {
                                 lo: start,

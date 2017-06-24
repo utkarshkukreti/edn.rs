@@ -340,21 +340,17 @@ fn test_tagged_values() {
 #noclose
 "#);
     assert_eq!(parser.read(),
-               Some(Ok(Value::TaggedValue("color".into(),
-                                          Box::new(Value::List(vec![Value::Integer(255),
-                                                                    Value::Integer(31),
-                                                                    Value::Integer(191)]))))));
+               Some(Ok(Value::Tagged("color".into(),
+                                     Box::new(Value::List(vec![Value::Integer(255),
+                                                               Value::Integer(31),
+                                                               Value::Integer(191)]))))));
     assert_eq!(parser.read(),
-               Some(Ok(Value::TaggedValue("foo/bar".into(),
-                                          Box::new(Value::Keyword("baz".into()))))));
+               Some(Ok(Value::Tagged("foo/bar".into(), Box::new(Value::Keyword("baz".into()))))));
     assert_eq!(parser.read(),
-               Some(Ok(
-                   Value::TaggedValue(
-                       "nested".into(),
-                       Box::new(
-                           Value::TaggedValue(
-                               "tags".into(),
-                               Box::new(Value::String("works".into()))))))));
+               Some(Ok(Value::Tagged("nested".into(),
+                                     Box::new(Value::Tagged("tags".into(),
+                                                            Box::new(Value::String("works"
+                                                                .into()))))))));
     assert_eq!(parser.read(),
                Some(Err(Error {
                    lo: 60,

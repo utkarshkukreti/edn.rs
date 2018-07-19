@@ -29,7 +29,7 @@ impl From<bool> for Value {
     }
 }
 
-impl <'a> From<&'a str> for Value {
+impl<'a> From<&'a str> for Value {
     fn from(s: &'a str) -> Self {
         Value::String(s.to_string())
     }
@@ -64,14 +64,20 @@ impl From<OrderedFloat<f64>> for Value {
     }
 }
 
-impl <A> From<Vec<A>> for Value where Value: From<A> {
+impl<A> From<Vec<A>> for Value
+where
+    Value: From<A>,
+{
     fn from(s: Vec<A>) -> Self {
         Value::Vector(s.into_iter().map(Value::from).collect())
     }
 }
 
-impl <K, V>From<BTreeMap<K, V>> for Value
-    where Value: From<K>, Value: From<V>{
+impl<K, V> From<BTreeMap<K, V>> for Value
+where
+    Value: From<K>,
+    Value: From<V>,
+{
     fn from(s: BTreeMap<K, V>) -> Self {
         let mut map = BTreeMap::new();
         for (k, v) in s {
@@ -81,11 +87,15 @@ impl <K, V>From<BTreeMap<K, V>> for Value
     }
 }
 
-impl <A> From<BTreeSet<A>> for Value
-    where Value: From<A>{
+impl<A> From<BTreeSet<A>> for Value
+where
+    Value: From<A>,
+{
     fn from(s: BTreeSet<A>) -> Self {
         let mut set = BTreeSet::new();
-        s.into_iter().for_each(|a| {set.insert(Value::from(a));});
+        s.into_iter().for_each(|a| {
+            set.insert(Value::from(a));
+        });
         Value::Set(set)
     }
 }

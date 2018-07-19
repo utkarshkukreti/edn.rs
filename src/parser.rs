@@ -7,21 +7,21 @@ use Value;
 
 pub struct Parser<'a> {
     str: &'a str,
-    chars: CharIndices<'a>
+    chars: CharIndices<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error {
     pub lo: usize,
     pub hi: usize,
-    pub message: String
+    pub message: String,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(str: &'a str) -> Parser<'a> {
         Parser {
             str: str,
-            chars: str.char_indices()
+            chars: str.char_indices(),
         }
     }
 
@@ -29,67 +29,63 @@ impl<'a> Parser<'a> {
         self.advance_while(|ch| ch.is_whitespace() || ch == ',');
 
         self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
-            (start, '0' ... '9') => {
+            (start, '0'...'9') => {
                 let end = self.advance_while(|ch| ch.is_digit(10));
                 if self.peek() == Some('.') {
                     self.chars.next();
                     let end = self.advance_while(|ch| ch.is_digit(10));
                     Ok(Value::Float(OrderedFloat(
-                        self.str[start..end].parse().unwrap())))
+                        self.str[start..end].parse().unwrap(),
+                    )))
                 } else {
                     Ok(Value::Integer(self.str[start..end].parse().unwrap()))
                 }
-            },
+            }
             (start, ch @ '+') | (start, ch @ '-') => {
                 self.chars.next();
                 match self.peek() {
-                    Some('0' ... '9') => {
-                        let start = if ch == '+' {
-                            start + 1
-                        } else {
-                            start
-                        };
+                    Some('0'...'9') => {
+                        let start = if ch == '+' { start + 1 } else { start };
                         let end = self.advance_while(|ch| ch.is_digit(10));
                         if self.peek() == Some('.') {
                             self.chars.next();
                             let end = self.advance_while(|ch| ch.is_digit(10));
                             Ok(Value::Float(OrderedFloat(
-                                self.str[start..end].parse().unwrap())))
+                                self.str[start..end].parse().unwrap(),
+                            )))
                         } else {
-                            Ok(Value::Integer(
-                                self.str[start..end].parse().unwrap()))
+                            Ok(Value::Integer(self.str[start..end].parse().unwrap()))
                         }
-                    },
+                    }
                     Some(ch) if is_symbol_tail(ch) => {
                         let end = self.advance_while(is_symbol_tail);
                         Ok(Value::Symbol(self.str[start..end].into()))
-                    },
-                    None | Some(' ') | Some('\t') | Some('\n') => {
-                        Ok(Value::Symbol(ch.to_string()))
                     }
-                    _ => unimplemented!()
+                    None | Some(' ') | Some('\t') | Some('\n') => Ok(Value::Symbol(ch.to_string())),
+                    _ => unimplemented!(),
                 }
-            },
+            }
             (start, '.') => {
                 self.chars.next();
-                if let Some('0' ... '9') = self.peek() {
+                if let Some('0'...'9') = self.peek() {
                     let end = self.advance_while(|ch| ch.is_digit(10));
                     Ok(Value::Float(OrderedFloat(
-                        self.str[start..end].parse().unwrap())))
+                        self.str[start..end].parse().unwrap(),
+                    )))
                 } else {
                     let end = self.advance_while(is_symbol_tail);
                     Ok(Value::Symbol(self.str[start..end].into()))
                 }
-            },
+            }
             (start, '\\') => {
                 self.chars.next();
                 let start = start + 1;
                 let end = self.advance_while(|ch| !ch.is_whitespace());
                 Ok(Value::Char(match &self.str[start..end] {
                     "newline" => '\n',
-                    "return"  => '\r',
-                    "space"   => ' ',
-                    "tab"     => '\t',
+                    "return" => '\r',
+                    "space" => ' ',
+                    "tab" => '\t',
                     otherwise => {
                         if otherwise.chars().count() == 1 {
                             otherwise.chars().next().unwrap()
@@ -97,13 +93,12 @@ impl<'a> Parser<'a> {
                             return Err(Error {
                                 lo: start - 1,
                                 hi: end,
-                                message: format!("invalid char literal `\\{}`",
-                                                 otherwise)
-                            })
+                                message: format!("invalid char literal `\\{}`", otherwise),
+                            });
                         }
                     }
                 }))
-            },
+            }
             (start, '"') => {
                 self.chars.next();
                 let mut string = String::new();
@@ -112,40 +107,43 @@ impl<'a> Parser<'a> {
                         Some((_, '"')) => return Ok(Value::String(string)),
                         Some((_, '\\')) => {
                             string.push(match self.chars.next() {
-                                Some((_, 't'))  => '\t',
-                                Some((_, 'r'))  => '\r',
-                                Some((_, 'n'))  => '\n',
+                                Some((_, 't')) => '\t',
+                                Some((_, 'r')) => '\r',
+                                Some((_, 'n')) => '\n',
                                 Some((_, '\\')) => '\\',
-                                Some((_, '"'))  => '\"',
-                                Some((pos, ch)) => return Err(Error {
-                                    lo: pos - 1,
-                                    hi: pos + 1,
-                                    message: format!(
-                                        "invalid string escape `\\{}`", ch)
-                                }),
-                                None       => unimplemented!()
+                                Some((_, '"')) => '\"',
+                                Some((pos, ch)) => {
+                                    return Err(Error {
+                                        lo: pos - 1,
+                                        hi: pos + 1,
+                                        message: format!("invalid string escape `\\{}`", ch),
+                                    })
+                                }
+                                None => unimplemented!(),
                             });
-                        },
+                        }
                         Some((_, ch)) => string.push(ch),
-                        None => return Err(Error {
-                            lo: start,
-                            hi: self.str.len(),
-                            message: "expected closing `\"`, found EOF".into()
-                        })
+                        None => {
+                            return Err(Error {
+                                lo: start,
+                                hi: self.str.len(),
+                                message: "expected closing `\"`, found EOF".into(),
+                            })
+                        }
                     }
                 }
-            },
+            }
             (start, ':') => {
                 self.chars.next();
                 let end = self.advance_while(is_symbol_tail);
                 Ok(Value::Keyword(self.str[start + 1..end].into()))
-            },
+            }
             (start, open @ '(') | (start, open @ '[') | (start, open @ '{') => {
                 let close = match open {
                     '(' => ')',
                     '[' => ']',
                     '{' => '}',
-                    _   => unreachable!()
+                    _ => unreachable!(),
                 };
 
                 self.chars.next();
@@ -165,35 +163,37 @@ impl<'a> Parser<'a> {
                                     if let Some(value) = iter.next() {
                                         map.insert(key, value);
                                     } else {
-                                        let end = self.chars.clone()
+                                        let end = self.chars
+                                            .clone()
                                             .next()
                                             .map(|(pos, _)| pos)
                                             .unwrap_or(self.str.len());
                                         return Err(Error {
                                             lo: start,
                                             hi: end,
-                                            message:
-                                            "odd number of items in a Map".into()
-                                        })
+                                            message: "odd number of items in a Map".into(),
+                                        });
                                     }
                                 }
                                 Value::Map(map)
                             }
-                            _   => unreachable!()
-                        })
+                            _ => unreachable!(),
+                        });
                     }
 
                     match self.read() {
                         Some(Ok(value)) => items.push(value),
-                        Some(Err(err))  => return Err(err),
-                        None => return Err(Error {
-                            lo: start,
-                            hi: self.str.len(),
-                            message: format!("unclosed `{}`", open)
-                        })
+                        Some(Err(err)) => return Err(err),
+                        None => {
+                            return Err(Error {
+                                lo: start,
+                                hi: self.str.len(),
+                                message: format!("unclosed `{}`", open),
+                            })
+                        }
                     }
                 }
-            },
+            }
             (start, '#') => {
                 self.chars.next();
                 match self.chars.next() {
@@ -201,26 +201,26 @@ impl<'a> Parser<'a> {
                         let close = '}';
                         let mut items = vec![];
                         loop {
-                            self.advance_while(|ch| ch.is_whitespace() ||
-                                                    ch == ',');
+                            self.advance_while(|ch| ch.is_whitespace() || ch == ',');
                             if self.peek() == Some(close) {
                                 self.chars.next();
-                                return Ok(Value::Set(
-                                    items.into_iter().collect()));
+                                return Ok(Value::Set(items.into_iter().collect()));
                             }
 
                             match self.read() {
                                 Some(Ok(value)) => items.push(value),
-                                Some(Err(err))  => return Err(err),
-                                None => return Err(Error {
-                                    lo: start,
-                                    hi: self.str.len(),
-                                    message: format!("unclosed `#{}`", open)
-                                })
+                                Some(Err(err)) => return Err(err),
+                                None => {
+                                    return Err(Error {
+                                        lo: start,
+                                        hi: self.str.len(),
+                                        message: format!("unclosed `#{}`", open),
+                                    })
+                                }
                             }
                         }
-                    },
-                    Some((start,  ch)) if is_symbol_head(ch) => {
+                    }
+                    Some((start, ch)) if is_symbol_head(ch) => {
                         self.chars.next();
                         let end = self.advance_while(is_symbol_tail);
 
@@ -228,33 +228,34 @@ impl<'a> Parser<'a> {
                         let value = self.read();
 
                         match value {
-                            Some(Ok(v)) => return Ok(Value::Tagged(tag.into(),
-                                                                   Box::new(v))),
+                            Some(Ok(v)) => return Ok(Value::Tagged(tag.into(), Box::new(v))),
                             Some(e) => return e,
-                            None => return Err(Error {
-                                lo: start,
-                                hi: self.str.len(),
-                                message: "malformed tagged value".into()
-                            })
+                            None => {
+                                return Err(Error {
+                                    lo: start,
+                                    hi: self.str.len(),
+                                    message: "malformed tagged value".into(),
+                                })
+                            }
                         }
-                    },
-                    _ => unimplemented!()
+                    }
+                    _ => unimplemented!(),
                 }
             }
             (start, ch) if is_symbol_head(ch) => {
                 self.chars.next();
                 let end = self.advance_while(is_symbol_tail);
                 Ok(match &self.str[start..end] {
-                    "true"    => Value::Boolean(true),
-                    "false"   => Value::Boolean(false),
-                    "nil"     => Value::Nil,
-                    otherwise => Value::Symbol(otherwise.into())
+                    "true" => Value::Boolean(true),
+                    "false" => Value::Boolean(false),
+                    "nil" => Value::Nil,
+                    otherwise => Value::Symbol(otherwise.into()),
                 })
-            },
+            }
             (_, '/') => {
                 self.chars.next();
                 Ok(Value::Symbol("/".into()))
-            },
+            }
             _ => unimplemented!(),
         })
     }
@@ -270,10 +271,10 @@ impl<'a> Parser<'a> {
                     if f(ch) {
                         self.chars.next();
                     } else {
-                        return pos
+                        return pos;
                     }
-                },
-                None => return self.str.len()
+                }
+                None => return self.str.len(),
             }
         }
     }
@@ -281,16 +282,28 @@ impl<'a> Parser<'a> {
 
 fn is_symbol_head(ch: char) -> bool {
     match ch {
-        'a' ... 'z' | 'A' ... 'Z' |
-        '.' | '*' | '+' | '!' | '-' | '_' |
-        '?' | '$' | '%' | '&' | '=' | '<' | '>' => true,
-        _ => false
+        'a'...'z'
+        | 'A'...'Z'
+        | '.'
+        | '*'
+        | '+'
+        | '!'
+        | '-'
+        | '_'
+        | '?'
+        | '$'
+        | '%'
+        | '&'
+        | '='
+        | '<'
+        | '>' => true,
+        _ => false,
     }
 }
 
 fn is_symbol_tail(ch: char) -> bool {
     is_symbol_head(ch) || match ch {
-        '0' ... '9' | ':' | '#' | '/' => true,
-        _ => false
+        '0'...'9' | ':' | '#' | '/' => true,
+        _ => false,
     }
 }

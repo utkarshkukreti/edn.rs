@@ -1,10 +1,10 @@
 extern crate edn;
 extern crate ordered_float;
 
-use std::collections::{BTreeMap,BTreeSet};
-use edn::Value;
 use edn::parser::{Error, Parser};
+use edn::Value;
 use ordered_float::OrderedFloat;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[test]
 fn from_bool() {
@@ -20,7 +20,10 @@ fn from_str() {
 #[test]
 fn from_string() {
     assert_eq!(Value::from("".to_string()), Value::String("".to_string()));
-    assert_eq!(Value::from("hello".to_string()), Value::String("hello".to_string()));
+    assert_eq!(
+        Value::from("hello".to_string()),
+        Value::String("hello".to_string())
+    );
 }
 
 #[test]
@@ -35,7 +38,10 @@ fn from_num() {
     assert_eq!(Value::from(-1), Value::Integer(-1));
 
     assert_eq!(Value::from(0_f64), Value::Float(OrderedFloat(0_f64)));
-    assert_eq!(Value::from(OrderedFloat(0_f64)), Value::Float(OrderedFloat(0_f64)));
+    assert_eq!(
+        Value::from(OrderedFloat(0_f64)),
+        Value::Float(OrderedFloat(0_f64))
+    );
 }
 
 #[test]
@@ -44,17 +50,18 @@ fn from_vec() {
     assert_eq!(Value::from(Vec::<Value>::new()), Value::Vector(vec![]));
     assert_eq!(Value::from(Vec::<String>::new()), Value::Vector(vec![]));
 
-    assert_eq!(Value::from( vec![ 1, 2, 3 ]),
+    assert_eq!(
+        Value::from(vec![1, 2, 3]),
         Value::Vector(vec![
             Value::Integer(1),
             Value::Integer(2),
-            Value::Integer(3)])
+            Value::Integer(3),
+        ])
     );
 }
 
 #[test]
 fn from_map() {
-
     let mut m = BTreeMap::new();
     m.insert(1, 2);
 
@@ -64,7 +71,6 @@ fn from_map() {
 }
 #[test]
 fn from_set() {
-
     let mut m = BTreeSet::new();
     m.insert(1);
     m.insert(2);

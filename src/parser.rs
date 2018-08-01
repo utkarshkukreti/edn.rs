@@ -26,7 +26,18 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
-        self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+        loop {
+            // Skip whitespace.
+            self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+            // Skip comment if present.
+            if self.chars.clone().next().map_or(false, |(_, ch)| ch == ';') {
+                self.advance_while(|ch| ch != '\n');
+                self.chars.next();
+            } else {
+                // Otherwise skip to parsing a value.
+                break;
+            }
+        }
 
         self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
             (start, '0'...'9') => {

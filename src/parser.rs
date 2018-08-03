@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
-        self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+        self.whitespace();
 
         self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
             (start, '0'...'9') => {
@@ -149,7 +149,7 @@ impl<'a> Parser<'a> {
                 self.chars.next();
                 let mut items = vec![];
                 loop {
-                    self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+                    self.whitespace();
 
                     if self.peek() == Some(close) {
                         self.chars.next();
@@ -201,7 +201,8 @@ impl<'a> Parser<'a> {
                         let close = '}';
                         let mut items = vec![];
                         loop {
-                            self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+                            self.whitespace();
+
                             if self.peek() == Some(close) {
                                 self.chars.next();
                                 return Ok(Value::Set(items.into_iter().collect()));
@@ -262,6 +263,21 @@ impl<'a> Parser<'a> {
 
     fn peek(&self) -> Option<char> {
         self.chars.clone().next().map(|(_, ch)| ch)
+    }
+
+    fn whitespace(&mut self) {
+        loop {
+            // Skip whitespace.
+            self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+            // Skip comment if present.
+            if self.chars.clone().next().map_or(false, |(_, ch)| ch == ';') {
+                self.advance_while(|ch| ch != '\n');
+                self.chars.next();
+            } else {
+                // Otherwise we're done.
+                return;
+            }
+        }
     }
 
     fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {

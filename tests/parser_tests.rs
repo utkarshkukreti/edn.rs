@@ -505,3 +505,28 @@ fn test_tagged_values() {
 
     assert_eq!(parser.read(), None);
 }
+
+#[test]
+fn test_comments() {
+    use std::collections::BTreeMap;
+
+    let mut parser = Parser::new(
+        "
+        ; 0
+        ;; ;
+        0
+        --;0
+        +0
+        [;[]
+        ]
+        {;}
+        }
+    ",
+    );
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(0))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("--".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Integer(0))));
+    assert_eq!(parser.read(), Some(Ok(Value::Vector(Vec::new()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Map(BTreeMap::new()))));
+    assert_eq!(parser.read(), None);
+}

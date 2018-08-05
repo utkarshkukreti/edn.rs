@@ -61,8 +61,7 @@ impl<'a> Parser<'a> {
                         let end = self.advance_while(is_symbol_tail);
                         Ok(Value::Symbol(self.str[start..end].into()))
                     }
-                    None | Some(' ') | Some('\t') | Some('\n') => Ok(Value::Symbol(ch.to_string())),
-                    _ => unimplemented!(),
+                    None | Some(_) => Ok(Value::Symbol(ch.to_string()))
                 }
             }
             (start, '.') => {
@@ -119,7 +118,13 @@ impl<'a> Parser<'a> {
                                         message: format!("invalid string escape `\\{}`", ch),
                                     })
                                 }
-                                None => unimplemented!(),
+                                None => {
+                                    return Err(Error {
+                                        lo: start,
+                                        hi: self.str.len(),
+                                        message: "expected string escape character, found EOF".into()
+                                    })
+                                }
                             });
                         }
                         Some((_, ch)) => string.push(ch),
@@ -221,7 +226,7 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    Some((start, ch)) if is_symbol_head(ch) => {
+                    Some((start, ch)) if ch.is_ascii_alphabetic() => {
                         self.chars.next();
                         let end = self.advance_while(is_symbol_tail);
 
@@ -240,7 +245,20 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    _ => unimplemented!(),
+                    Some((start, ch)) => {
+                        return Err(Error {
+                            lo: start,
+                            hi: self.str.len(),
+                            message: format!("unknown dispatch character: {}", ch)
+                        })
+                    },
+                    None => {
+                        return Err(Error {
+                            lo: start,
+                            hi: self.str.len(),
+                            message: "expected dispatch character, found EOF".into()
+                        })
+                    }
                 }
             }
             (start, ch) if is_symbol_head(ch) => {
@@ -257,7 +275,13 @@ impl<'a> Parser<'a> {
                 self.chars.next();
                 Ok(Value::Symbol("/".into()))
             }
-            _ => unimplemented!(),
+            (_, ch) => {
+                return Err(Error {
+                    lo: pos,
+                    hi: self.str.len(),
+                    message: format!("invalid leading character: {}", ch)
+                });
+            }
         })
     }
 

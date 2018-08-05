@@ -104,6 +104,16 @@ quux"
             message: "expected closing `\"`, found EOF".into()
         }))
     );
+
+    let mut parser = Parser::new("   \"\\");
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 3,
+            hi: 5,
+            message: "expected string escape character, found EOF".into()
+        }))
+    );
 }
 
 #[test]
@@ -114,6 +124,7 @@ foo
 +foo
 -foo
 .foo
++[]
 .*+!-_?$%&=<>:#123
 +
 -
@@ -125,6 +136,8 @@ namespaced/symbol
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("+foo".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol("-foo".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::Symbol(".foo".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Symbol("+".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::Vector(vec![]))));
     assert_eq!(
         parser.read(),
         Some(Ok(Value::Symbol(".*+!-_?$%&=<>:#123".into())))
@@ -504,6 +517,52 @@ fn test_tagged_values() {
     );
 
     assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_invalid_dispatch_characters() {
+    let mut parser = Parser::new("#&");
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 1,
+            hi: 2,
+            message: "unknown dispatch character: &".into()
+        }))
+    );
+
+    let mut parser = Parser::new("#");
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 0,
+            hi: 1,
+            message: "expected dispatch character, found EOF".into()
+        }))
+    );
+}
+
+#[test]
+fn test_invalid_leading_characters() {
+    let mut parser = Parser::new("`");
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 0,
+            hi: 1,
+            message: "invalid leading character: `".into()
+        }))
+    );
+
+    let mut parser = Parser::new("{:a ~}");
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 4,
+            hi: 6,
+            message: "invalid leading character: ~".into()
+        }))
+    );
 }
 
 #[test]

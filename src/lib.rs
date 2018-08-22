@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use ordered_float::OrderedFloat;
 
 pub mod parser;
+pub mod printer;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {

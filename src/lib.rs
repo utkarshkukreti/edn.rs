@@ -1,19 +1,33 @@
 extern crate ordered_float;
 
+use ordered_float::OrderedFloat;
+
 #[cfg(feature = "immutable")]
 extern crate im;
 
-use ordered_float::OrderedFloat;
-
+#[cfg(feature = "immutable")]
+use immutable::{Map, Set, Vec};
 #[cfg(not(feature = "immutable"))]
-use std::collections::{BTreeMap, BTreeSet};
+use standard::{Map, Set, Vec};
 
 #[cfg(feature = "immutable")]
 use im::{HashMap, HashSet, Vector};
+#[cfg(not(feature = "immutable"))]
+use std::collections::{BTreeSet,BTreeMap};
+
+#[cfg(feature = "immutable")]
+use std::hash::Hash;
+
+#[cfg(not(feature = "immutable"))]
+mod standard;
+#[cfg(feature = "immutable")]
+mod immutable;
+
+use std::fmt;
 
 pub mod parser;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     Nil,
     Boolean(bool),
@@ -30,21 +44,12 @@ pub enum Value {
     Tagged(String, Box<Value>),
 }
 
-// use these if immutable feature flag set
-#[cfg(feature = "immutable")]
-type Map<K, V> = HashMap<K, V>;
-#[cfg(feature = "immutable")]
-type Vec<T> = Vector<T>;
-#[cfg(feature = "immutable")]
-type Set<T> = HashSet<T>;
-
-// else use defaults
-#[cfg(not(feature = "immutable"))]
-type Map<K, V> = BTreeMap<K, V>;
-#[cfg(not(feature = "immutable"))]
-type Vec<T> = std::vec::Vec<T>;
-#[cfg(not(feature = "immutable"))]
-type Set<T> = BTreeSet<T>;
+// TODO.
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "debug not implemented for Value")
+    }
+}
 
 impl From<bool> for Value {
     fn from(s: bool) -> Self {
@@ -87,22 +92,36 @@ impl From<OrderedFloat<f64>> for Value {
     }
 }
 
+#[cfg(not(feature = "immutable"))]
 impl<A> From<Vec<A>> for Value
-where
-    Value: From<A>,
+    where
+        Value: From<A>,
 {
     fn from(s: Vec<A>) -> Self {
         Value::Vector(s.into_iter().map(Value::from).collect())
     }
 }
 
-impl<K, V> From<BTreeMap<K, V>> for Value
-where
-    Value: From<K>,
-    Value: From<V>,
+#[cfg(feature = "immutable")]
+impl<A> From<Vector<A>> for Value
+    where
+        A: Clone + Hash + Eq,
+        Value: From<A>,
 {
-    fn from(s: BTreeMap<K, V>) -> Self {
-        let mut map = BTreeMap::new();
+    fn from(s: Vector<A>) -> Self {
+        Value::Vector(s.iter().map(|a| Value::from(a.clone())).collect())
+    }
+}
+
+
+#[cfg(not(feature = "immutable"))]
+impl<K, V> From<BTreeMap<K, V>> for Value
+    where
+        Value: From<K>,
+        Value: From<V>,
+{
+    fn from(s: Map<K, V>) -> Self {
+        let mut map = Map::new();
         for (k, v) in s {
             map.insert(Value::from(k), Value::from(v));
         }
@@ -110,9 +129,27 @@ where
     }
 }
 
+
+#[cfg(feature = "immutable")]
+impl<K, V> From<HashMap<K, V>> for Value
+    where
+        K: Clone + Hash + Eq,
+        V: Clone + Hash + Eq,
+        Value: From<K>,
+        Value: From<V>,
+{
+    fn from(s: HashMap<K, V>) -> Self {
+        Value::Map(
+            s.iter()
+                .map(|(k, v)|
+                    (Value::from(k.clone()), Value::from(v.clone()))).collect())
+    }
+}
+
+#[cfg(not(feature = "immutable"))]
 impl<A> From<BTreeSet<A>> for Value
-where
-    Value: From<A>,
+    where
+        Value: From<A>,
 {
     fn from(s: BTreeSet<A>) -> Self {
         let mut set = BTreeSet::new();
@@ -120,5 +157,17 @@ where
             set.insert(Value::from(a));
         });
         Value::Set(set)
+    }
+}
+
+
+#[cfg(feature = "immutable")]
+impl<A> From<HashSet<A>> for Value
+    where
+        A: Clone + Hash + Eq,
+        Value: From<A>,
+{
+    fn from(s: HashSet<A>) -> Self {
+        Value::Set(s.iter().map(|v| Value::from(v.clone())).collect())
     }
 }

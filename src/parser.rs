@@ -1,9 +1,14 @@
-use std::collections::BTreeMap;
 use std::str::CharIndices;
 
 use ordered_float::OrderedFloat;
 
 use Value;
+
+#[cfg(feature = "immutable")]
+use immutable::{Map, Vec, Set};
+
+#[cfg(not(feature = "immutable"))]
+use standard::{Map, Vec, Set};
 
 pub struct Parser<'a> {
     str: &'a str,
@@ -154,10 +159,10 @@ impl<'a> Parser<'a> {
                     if self.peek() == Some(close) {
                         self.chars.next();
                         return Ok(match open {
-                            '(' => Value::List(items),
-                            '[' => Value::Vector(items),
+                            '(' => Value::List(Vec::from(items)),
+                            '[' => Value::Vector(Vec::from(items)),
                             '{' => {
-                                let mut map = BTreeMap::new();
+                                let mut map = Map::new();
                                 let mut iter = items.into_iter();
                                 while let Some(key) = iter.next() {
                                     if let Some(value) = iter.next() {

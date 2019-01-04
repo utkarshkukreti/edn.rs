@@ -11,3 +11,7 @@ categories = ["parser-implementations"]
 
 [dependencies]
 ordered-float = "0.4.0"
+im = {version = "12.2.0", optional = true}
+
+[features]
+immutable = ["im"]

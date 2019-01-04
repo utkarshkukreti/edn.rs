@@ -1,8 +1,15 @@
 extern crate ordered_float;
 
-use std::collections::{BTreeMap, BTreeSet};
+#[cfg(feature = "immutable")]
+extern crate im;
 
 use ordered_float::OrderedFloat;
+
+#[cfg(not(feature = "immutable"))]
+use std::collections::{BTreeMap, BTreeSet};
+
+#[cfg(feature = "immutable")]
+use im::{HashMap, HashSet, Vector};
 
 pub mod parser;
 
@@ -18,10 +25,26 @@ pub enum Value {
     Float(OrderedFloat<f64>),
     List(Vec<Value>),
     Vector(Vec<Value>),
-    Map(BTreeMap<Value, Value>),
-    Set(BTreeSet<Value>),
+    Map(Map<Value, Value>),
+    Set(Set<Value>),
     Tagged(String, Box<Value>),
 }
+
+// use these if immutable feature flag set
+#[cfg(feature = "immutable")]
+type Map<K, V> = HashMap<K, V>;
+#[cfg(feature = "immutable")]
+type Vec<T> = Vector<T>;
+#[cfg(feature = "immutable")]
+type Set<T> = HashSet<T>;
+
+// else use defaults
+#[cfg(not(feature = "immutable"))]
+type Map<K, V> = BTreeMap<K, V>;
+#[cfg(not(feature = "immutable"))]
+type Vec<T> = std::vec::Vec<T>;
+#[cfg(not(feature = "immutable"))]
+type Set<T> = BTreeSet<T>;
 
 impl From<bool> for Value {
     fn from(s: bool) -> Self {

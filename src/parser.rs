@@ -112,6 +112,7 @@ impl<'a> Parser<'a> {
                                 Some((_, 'n')) => '\n',
                                 Some((_, '\\')) => '\\',
                                 Some((_, '"')) => '\"',
+                                Some((_, '\'')) => '\'',
                                 Some((pos, ch)) => {
                                     return Err(Error {
                                         lo: pos - 1,
@@ -130,6 +131,39 @@ impl<'a> Parser<'a> {
                                 message: "expected closing `\"`, found EOF".into(),
                             })
                         }
+                    }
+                }
+            }
+            (_, '\'') => {
+                self.chars.next();
+                let mut string = String::new();
+                loop {
+                    match self.chars.next() {
+                        Some((_, '\'')) => {
+                            match string.len() {
+                                1 => return Ok(Value::Char(string.chars().next().unwrap())),
+                                _ => return Ok(Value::String(string)),
+                            }
+                        }
+                        Some((_, '\\')) => {
+                            string.push(match self.chars.next() {
+                                Some((_, 't')) => '\t',
+                                Some((_, 'r')) => '\r',
+                                Some((_, 'n')) => '\n',
+                                Some((_, '\\')) => '\\',
+                                Some((_, '"')) => '\"',
+                                Some((pos, ch)) => {
+                                    return Err(Error {
+                                        lo: pos - 1,
+                                        hi: pos + 1,
+                                        message: format!("invalid string escape `\\{}`", ch),
+                                    })
+                                }
+                                None => unimplemented!(),
+                            });
+                        }
+                        Some((_, ch)) => string.push(ch),
+                        None => return Ok(Value::Char('\'')),
                     }
                 }
             }

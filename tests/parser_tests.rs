@@ -48,13 +48,15 @@ fn test_read_floats() {
 
 #[test]
 fn test_read_chars() {
-    let mut parser = Parser::new("\\a \\π \\newline \\return \\space \\tab");
+    let mut parser = Parser::new("\\a \\π \\newline \\return \\space \\tab 'x' ' ");
     assert_eq!(parser.read(), Some(Ok(Value::Char('a'))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('π'))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('\n'))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('\r'))));
     assert_eq!(parser.read(), Some(Ok(Value::Char(' '))));
     assert_eq!(parser.read(), Some(Ok(Value::Char('\t'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('x'))));
+    assert_eq!(parser.read(), Some(Ok(Value::Char('\''))));
     assert_eq!(parser.read(), None);
 
     let mut parser = Parser::new("  \\foo  ");
@@ -76,13 +78,13 @@ fn test_read_strings() {
 "bar"
 "baz
 quux"
-"\t\r\n\\\""
+"\t\r\n\\\"\'"
 "#,
     );
     assert_eq!(parser.read(), Some(Ok(Value::String("foo".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::String("bar".into()))));
     assert_eq!(parser.read(), Some(Ok(Value::String("baz\nquux".into()))));
-    assert_eq!(parser.read(), Some(Ok(Value::String("\t\r\n\\\"".into()))));
+    assert_eq!(parser.read(), Some(Ok(Value::String("\t\r\n\\\"\'".into()))));
     assert_eq!(parser.read(), None);
 
     let mut parser = Parser::new("\"foo\\x\"");

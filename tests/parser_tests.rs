@@ -34,7 +34,7 @@ fn test_read_integers() {
 fn test_read_floats() {
     use ordered_float::OrderedFloat;
 
-    let mut parser = Parser::new("0. 0.0 -0.0 +0.0 1.23 +1.23 -1.23 .125");
+    let mut parser = Parser::new("0. 0.0 -0.0 +0.0 1.23 +1.23 -1.23 .125 1.77429E8 1.77429E-8");
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.0)))));
@@ -43,6 +43,14 @@ fn test_read_floats() {
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(1.23)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(-1.23)))));
     assert_eq!(parser.read(), Some(Ok(Value::Float(OrderedFloat(0.125)))));
+    assert_eq!(
+        parser.read(),
+        Some(Ok(Value::Float(OrderedFloat(177429000.0))))
+    );
+    assert_eq!(
+        parser.read(),
+        Some(Ok(Value::Float(OrderedFloat(0.0000000177429))))
+    );
     assert_eq!(parser.read(), None);
 }
 
@@ -424,12 +432,14 @@ fn test_read_sets() {
                         .iter()
                         .cloned()
                         .collect()
-                )].iter()
-                    .cloned()
-                    .collect()
-            )].iter()
+                )]
+                .iter()
                 .cloned()
                 .collect()
+            )]
+            .iter()
+            .cloned()
+            .collect()
         )))
     );
 

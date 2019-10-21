@@ -31,9 +31,11 @@ impl<'a> Parser<'a> {
         self.chars.clone().next().map(|(pos, ch)| match (pos, ch) {
             (start, '0'...'9') => {
                 let end = self.advance_while(|ch| ch.is_digit(10));
-                if self.peek() == Some('.') {
+                let p = self.peek();
+                if p == Some('.') || p == Some('E') || p == Some('e') {
                     self.chars.next();
-                    let end = self.advance_while(|ch| ch.is_digit(10));
+                    let end = self
+                        .advance_while(|ch| ch.is_digit(10) || ch == 'E' || ch == 'e' || ch == '-');
                     Ok(Value::Float(OrderedFloat(
                         self.str[start..end].parse().unwrap(),
                     )))

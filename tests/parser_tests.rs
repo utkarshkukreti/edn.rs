@@ -424,12 +424,14 @@ fn test_read_sets() {
                         .iter()
                         .cloned()
                         .collect()
-                )].iter()
-                    .cloned()
-                    .collect()
-            )].iter()
+                )]
+                .iter()
                 .cloned()
                 .collect()
+            )]
+            .iter()
+            .cloned()
+            .collect()
         )))
     );
 
@@ -529,4 +531,44 @@ fn test_comments() {
     assert_eq!(parser.read(), Some(Ok(Value::Vector(Vec::new()))));
     assert_eq!(parser.read(), Some(Ok(Value::Map(BTreeMap::new()))));
     assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_read_namespaced_map() {
+    use std::collections::BTreeMap;
+    let mut parser =
+        Parser::new(r#"#:ns{:key "val"} #:ns{:key #:inner{:key "val"}} #:ns{"key" "val"}"#);
+
+    assert_eq!(
+        parser.read(),
+        Some(Ok(Value::Map({
+            let mut map = BTreeMap::new();
+            map.insert(Value::Keyword("ns/key".into()), Value::String("val".into()));
+            map
+        })))
+    );
+
+    assert_eq!(
+        parser.read(),
+        Some(Ok(Value::Map({
+            let mut inner = BTreeMap::new();
+            inner.insert(
+                Value::Keyword("inner/key".into()),
+                Value::String("val".into()),
+            );
+
+            let mut map = BTreeMap::new();
+            map.insert(Value::Keyword("ns/key".into()), Value::Map(inner));
+            map
+        })))
+    );
+
+    assert_eq!(
+        parser.read(),
+        Some(Err(Error {
+            lo: 49,
+            hi: 65,
+            message: "non keyword key in namespaced map".into(),
+        }))
+    );
 }

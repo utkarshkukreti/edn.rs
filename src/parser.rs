@@ -163,7 +163,8 @@ impl<'a> Parser<'a> {
                                     if let Some(value) = iter.next() {
                                         map.insert(key, value);
                                     } else {
-                                        let end = self.chars
+                                        let end = self
+                                            .chars
                                             .clone()
                                             .next()
                                             .map(|(pos, _)| pos)
@@ -236,6 +237,42 @@ impl<'a> Parser<'a> {
                                     lo: start,
                                     hi: self.str.len(),
                                     message: "malformed tagged value".into(),
+                                })
+                            }
+                        }
+                    }
+                    Some((start, ch)) if ch == ':' => {
+                        let end = self.advance_while(|ch| ch != '{');
+                        let namespace = &self.str[start + 1..end];
+                        match self.read() {
+                            Some(Ok(Value::Map(map))) => {
+                                let mut new_map: BTreeMap<Value, Value> = BTreeMap::new();
+
+                                for (key, value) in map.iter() {
+                                    match key {
+                                        Value::Keyword(k) => {
+                                            let _opt = new_map.insert(
+                                                Value::Keyword(format!("{}/{}", namespace, &k)),
+                                                value.clone(),
+                                            );
+                                        }
+                                        _ => {
+                                            return Err(Error {
+                                                lo: start,
+                                                hi: self.str.len(),
+                                                message: "non keyword key in namespaced map".into(),
+                                            });
+                                        }
+                                    }
+                                }
+                                return Ok(Value::Map(new_map));
+                            }
+                            Some(e) => return e,
+                            _ => {
+                                return Err(Error {
+                                    lo: start,
+                                    hi: self.str.len(),
+                                    message: "malformed namespaced map".into(),
                                 })
                             }
                         }
@@ -318,8 +355,9 @@ fn is_symbol_head(ch: char) -> bool {
 }
 
 fn is_symbol_tail(ch: char) -> bool {
-    is_symbol_head(ch) || match ch {
-        '0'...'9' | ':' | '#' | '/' => true,
-        _ => false,
-    }
+    is_symbol_head(ch)
+        || match ch {
+            '0'...'9' | ':' | '#' | '/' => true,
+            _ => false,
+        }
 }
